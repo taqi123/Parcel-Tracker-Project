@@ -8,11 +8,11 @@ using namespace std;
 
 DeliveryManager::DeliveryManager() {
     head = tail = nullptr;
-    loadFromFile();   // 🔥 auto-load data on start
+    loadFromFile();   
 }
 
 DeliveryManager::~DeliveryManager() {
-    saveToFile();     // 🔥 auto-save data on exit
+    saveToFile();    
     while (head) {
         Parcel* temp = head;
         head = head->next;

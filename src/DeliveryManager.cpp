@@ -2,145 +2,62 @@
 #include <iostream>
 using namespace std;
 
-/* =========================
-   Constructor & Destructor
-   ========================= */
-
 DeliveryManager::DeliveryManager() {
     head = tail = nullptr;
 }
 
 DeliveryManager::~DeliveryManager() {
-    Parcel* curr = head;
-    while (curr != nullptr) {
-        Parcel* nextNode = curr->next;
-        delete curr;
-        curr = nextNode;
+    while (head) {
+        Parcel* temp = head;
+        head = head->next;
+        delete temp;
     }
 }
-
-/* =========================
-   Utility Functions
-   ========================= */
 
 bool DeliveryManager::parcelExists(int id) {
-    Parcel* temp = head;
-    while (temp != nullptr) {
-        if (temp->parcelID == id)
-            return true;
-        temp = temp->next;
-    }
-    return false;
+    return findParcel(id) != nullptr;
 }
 
-/* =========================
-   Core Parcel Operations
-   ========================= */
+Parcel* DeliveryManager::findParcel(int id) {
+    Parcel* temp = head;
+    while (temp) {
+        if (temp->parcelID == id)
+            return temp;
+        temp = temp->next;
+    }
+    return nullptr;
+}
+
+/* ================= CORE ================= */
 
 void DeliveryManager::addParcel(int id, string sender, string receiver, string address) {
     if (parcelExists(id)) {
-        cout << "Parcel with ID " << id << " already exists.\n";
+        cout << "Parcel ID already exists.\n";
         return;
     }
 
-    Parcel* newParcel = new Parcel(id, sender, receiver, address, "Booked");
+    Parcel* p = new Parcel(id, sender, receiver, address, "Booked");
+    p->addTrackingEvent("Parcel Booked", "Day 1");
 
-    // 🔥 Tracking history (Phase 2)
-    newParcel->addTrackingEvent("Parcel Booked", "Day 1");
+    undo.save("ADD", p);
 
-    if (head == nullptr) {
-        head = tail = newParcel;
+    if (!head) {
+        head = tail = p;
     } else {
-        tail->next = newParcel;
-        tail = newParcel;
+        tail->next = p;
+        tail = p;
     }
-
-    cout << "Parcel added successfully.\n";
+    cout << "Parcel added.\n";
 }
-
-void DeliveryManager::displayParcels() {
-    if (head == nullptr) {
-        cout << "No parcels available.\n";
-        return;
-    }
-
-    Parcel* temp = head;
-    while (temp != nullptr) {
-        cout << "\nParcel ID: " << temp->parcelID;
-        cout << "\nSender: " << temp->senderName;
-        cout << "\nReceiver: " << temp->receiverName;
-        cout << "\nAddress: " << temp->deliveryAddress;
-        cout << "\nStatus: " << temp->status << endl;
-        cout << "-----------------------------";
-        temp = temp->next;
-    }
-    cout << endl;
-}
-
-void DeliveryManager::searchParcelByID(int id) {
-    Parcel* temp = head;
-    while (temp != nullptr) {
-        if (temp->parcelID == id) {
-            cout << "\nParcel Found!\n";
-            cout << "Sender: " << temp->senderName << endl;
-            cout << "Receiver: " << temp->receiverName << endl;
-            cout << "Address: " << temp->deliveryAddress << endl;
-            cout << "Status: " << temp->status << endl;
-            return;
-        }
-        temp = temp->next;
-    }
-    cout << "Parcel not found.\n";
-}
-
-/* =========================
-   Update Status (with tracking)
-   ========================= */
-
-void DeliveryManager::updateParcelStatus(int id) {
-    Parcel* temp = head;
-
-    while (temp != nullptr && temp->parcelID != id)
-        temp = temp->next;
-
-    if (!temp) {
-        cout << "Parcel not found.\n";
-        return;
-    }
-
-    if (temp->status == "Booked") {
-        temp->status = "In Progress";
-        temp->addTrackingEvent("Status changed to In Progress", "Day 2");
-    }
-    else if (temp->status == "In Progress") {
-        temp->status = "Delivered";
-        temp->addTrackingEvent("Parcel Delivered", "Day 3");
-    }
-    else {
-        cout << "Parcel already delivered.\n";
-        return;
-    }
-
-    cout << "Parcel status updated successfully.\n";
-}
-
-/* =========================
-   Delete Parcel
-   ========================= */
 
 void DeliveryManager::deleteParcel(int id) {
-    if (!head) {
-        cout << "No parcels to delete.\n";
-        return;
-    }
+    if (!head) return;
 
     if (head->parcelID == id) {
+        undo.save("DELETE", head);
         Parcel* del = head;
         head = head->next;
-        if (del == tail)
-            tail = nullptr;
         delete del;
-        cout << "Parcel deleted successfully.\n";
         return;
     }
 
@@ -148,46 +65,108 @@ void DeliveryManager::deleteParcel(int id) {
     while (temp->next && temp->next->parcelID != id)
         temp = temp->next;
 
-    if (!temp->next) {
-        cout << "Parcel not found.\n";
-        return;
+    if (temp->next) {
+        undo.save("DELETE", temp->next);
+        Parcel* del = temp->next;
+        temp->next = del->next;
+        delete del;
     }
-
-    Parcel* del = temp->next;
-    temp->next = del->next;
-    if (del == tail)
-        tail = temp;
-    delete del;
-
-    cout << "Parcel deleted successfully.\n";
 }
 
-/* =========================
-   Tracking History Display
-   ========================= */
+void DeliveryManager::updateParcelStatus(int id) {
+    Parcel* p = findParcel(id);
+    if (!p) return;
+
+    undo.save("UPDATE", p);
+
+    if (p->status == "Booked") {
+        p->status = "In Progress";
+        p->addTrackingEvent("In Progress", "Day 2");
+    } else if (p->status == "In Progress") {
+        p->status = "Delivered";
+        p->addTrackingEvent("Delivered", "Day 3");
+    }
+}
+
+/* ================= DISPLAY ================= */
+
+void DeliveryManager::displayParcels() {
+    Parcel* temp = head;
+    while (temp) {
+        cout << "\nID: " << temp->parcelID
+             << "\nSender: " << temp->senderName
+             << "\nReceiver: " << temp->receiverName
+             << "\nStatus: " << temp->status << "\n";
+        temp = temp->next;
+    }
+}
 
 void DeliveryManager::showTrackingHistory(int id) {
+    Parcel* p = findParcel(id);
+    if (!p) return;
+
+    TrackingEvent* e = p->historyHead;
+    while (e) {
+        cout << e->timestamp << " : " << e->description << endl;
+        e = e->next;
+    }
+}
+
+/* ================= SEARCH ================= */
+
+void DeliveryManager::searchBySender(string name) {
     Parcel* temp = head;
-
-    while (temp && temp->parcelID != id)
+    while (temp) {
+        if (temp->senderName == name)
+            cout << "Found Parcel ID: " << temp->parcelID << endl;
         temp = temp->next;
+    }
+}
 
-    if (!temp) {
-        cout << "Parcel not found.\n";
+void DeliveryManager::searchByStatus(string status) {
+    Parcel* temp = head;
+    while (temp) {
+        if (temp->status == status)
+            cout << "Parcel ID: " << temp->parcelID << endl;
+        temp = temp->next;
+    }
+}
+
+/* ================= QUEUE ================= */
+
+void DeliveryManager::enqueueParcel(int id) {
+    if (!parcelExists(id)) return;
+    queue.enqueue(id);
+}
+
+void DeliveryManager::processDelivery() {
+    int id = queue.dequeue();
+    if (id != -1)
+        updateParcelStatus(id);
+}
+
+void DeliveryManager::showQueue() {
+    queue.displayQueue();
+}
+
+/* ================= UNDO ================= */
+
+void DeliveryManager::undoLastAction() {
+    Parcel* snap = undo.getSnapshot();
+    if (!snap) {
+        cout << "Nothing to undo.\n";
         return;
     }
 
-    cout << "\nTracking History for Parcel ID " << id << ":\n";
-
-    TrackingEvent* event = temp->historyHead;
-    if (!event) {
-        cout << "No tracking events available.\n";
-        return;
+    if (undo.getAction() == "ADD") {
+        deleteParcel(snap->parcelID);
+    } else if (undo.getAction() == "DELETE") {
+        addParcel(snap->parcelID, snap->senderName, snap->receiverName, snap->deliveryAddress);
+    } else if (undo.getAction() == "UPDATE") {
+        Parcel* p = findParcel(snap->parcelID);
+        if (p) p->status = snap->status;
     }
 
-    while (event) {
-        cout << "- " << event->timestamp
-             << " : " << event->description << endl;
-        event = event->next;
-    }
+    undo.clear();
+    cout << "Undo completed.\n";
 }

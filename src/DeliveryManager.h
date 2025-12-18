@@ -1,8 +1,3 @@
-#ifndef DELIVERY_MANAGER_H
-#define DELIVERY_MANAGER_H
-
-#include "Parcel.h"
-
 class DeliveryManager {
 private:
     Parcel* head;
@@ -18,6 +13,7 @@ public:
     void searchParcelByID(int id);
     void updateParcelStatus(int id);
     void deleteParcel(int id);
-};
 
-#endif
+    // 👇 ADD THIS LINE
+    void showTrackingHistory(int id);
+};

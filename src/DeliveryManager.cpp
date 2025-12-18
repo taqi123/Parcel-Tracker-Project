@@ -1,19 +1,25 @@
-class DeliveryManager {
-private:
-    Parcel* head;
-    Parcel* tail;
+void DeliveryManager::showTrackingHistory(int id) {
+    Parcel* temp = head;
 
-public:
-    DeliveryManager();
-    ~DeliveryManager();
+    while (temp && temp->parcelID != id)
+        temp = temp->next;
 
-    bool parcelExists(int id);
-    void addParcel(int id, string sender, string receiver, string address);
-    void displayParcels();
-    void searchParcelByID(int id);
-    void updateParcelStatus(int id);
-    void deleteParcel(int id);
+    if (!temp) {
+        cout << "Parcel not found.\n";
+        return;
+    }
 
-    // 👇 ADD THIS LINE
-    void showTrackingHistory(int id);
-};
+    cout << "\nTracking History for Parcel ID " << id << ":\n";
+
+    TrackingEvent* event = temp->historyHead;
+    if (!event) {
+        cout << "No tracking events available.\n";
+        return;
+    }
+
+    while (event) {
+        cout << "- " << event->timestamp
+             << " : " << event->description << endl;
+        event = event->next;
+    }
+}

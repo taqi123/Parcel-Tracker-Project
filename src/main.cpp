@@ -13,8 +13,10 @@ int main() {
         cout << "3. Display All Parcels\n";
         cout << "4. Search Parcel by ID\n";
         cout << "5. Delete Parcel\n";
-        cout << "6. Exit\n";
-        cout << "Enter choice: ";
+
+        cout << "6. View Tracking History\n";
+        cout << "7. Exit\n";
+        
         cin >> choice;
 
         int id;
@@ -57,6 +59,12 @@ int main() {
             break;
 
         case 6:
+            cout << "Enter Parcel ID: ";
+            cin >> id;
+            manager.showTrackingHistory(id);
+            break;
+            
+        case 7:
             cout << "Exiting system...\n";
             break;
 
